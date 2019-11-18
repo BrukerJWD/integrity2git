@@ -34,7 +34,7 @@ if not project.endswith("/project.pj"):
 
 def reencode(string):
     return string.encode("utf-8").decode(sys.__stdout__.encoding)
-    
+
 def print_out(data):
     print(data, file=stdout)
 
@@ -80,7 +80,7 @@ def si(command):
         print_out('checkpoint')
         raise Exception("Command failed")
     return data.decode("cp850")
-    
+
 
 def retrieve_revisions(devpath=False):
     if devpath:
@@ -131,7 +131,7 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
     abs_sandbox_path = abs_sandbox_path.replace("\\", "/")
     integrity_file = os.path.basename(project)
     git_folder_re = re.compile("\.git(\\\|$)")  #any path named .git, with or without child elements. But will not match .gitignore
-    
+
     if "ancestorDate" in revisions[0]:
         ancestor = revisions[0]["ancestor"]
         ancestorDate = revisions[0]["ancestorDate"]
@@ -139,7 +139,7 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
     for revision in revisions:
         print("%d of %d (%0.2f%%)" % (done_count+1, total_revision_count, done_count/total_revision_count*100), file=sys.stderr)
         done_count += 1
-        
+
         mark = marks[revision["number"]]
         si('si retargetsandbox %s --quiet --project="%s" --projectRevision=%s %s/%s' % (additional_si_args, project, revision["number"], abs_sandbox_path, integrity_file))
         si('si resync --yes --recurse %s --quiet --sandbox=%s/%s' % (additional_si_args, abs_sandbox_path, integrity_file))
@@ -169,7 +169,7 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
                 if (fullfile.find('mks_checkpoints_to_git') != -1):
                     continue
                 inline_data(fullfile)
-        
+
         for tag in revision["tags"]:
             print_out('tag %s' % tag.replace(" ", "_"))
             print_out('from %s' % mark)
@@ -219,7 +219,7 @@ def create_marks(master_revisions, devpaths3):
             assert len(commits) == 1, "No commit found for date " + date
             marks[revision] = commits[0].hexsha
             return commits[0].hexsha
-    
+
     if len(master_revisions) > 0:
         if "ancestorDate" in master_revisions[0]: # we are continuing master
             convert_revision_to_mark(master_revisions[0]["ancestor"], False, master_revisions[0]["ancestorDate"])

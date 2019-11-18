@@ -32,4 +32,3 @@ The date depends on the locale. Depending on the locale settings of your machine
 
 MKS and git both have case-sensitive tags (i.e., the tag "abcd" and "Abcd" are not the same). If `git fast-import` is running on a case-insensitive filesystem (like NTFS), such tags are considered duplicate ([see mailing list](https://marc.info/?l=git&m=155157276401181&w=2) and git fails with an error like "cannot lock ref". In this case you either have to ignore one of the tags (e.g. because it is a duplicate anyway, probably in line 86) or use a case-sensitive filesystem (NTFS can do that, too: `fsutil.exe file SetCaseSensitiveInfo C:\sensitive enable`).
 
-
