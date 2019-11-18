@@ -2,6 +2,7 @@
 
 import os, sys, re, time, platform, shutil
 import subprocess
+import locale
 from datetime import datetime
 from git import Repo
 
@@ -20,11 +21,21 @@ stdout = open(sys.__stdout__.fileno(),  # no wrapper around stdout which does LF
 additional_si_args = ""
 project = sys.argv[1]
 
+if not project.endswith("/project.pj"):
+    project += "/project.pj"
+
+def reencode(string):
+    return string.encode("utf-8").decode(sys.__stdout__.encoding)
+    
 def print_out(data):
     print(data, file=stdout)
 
+def trace(message):
+    print("%s %s" % (datetime.now().strftime("%H:%M:%S"), message), file=sys.stderr)
+
 def export_string(string):
-    print_out('data %d\n%s' % (len(string), string))
+    string = reencode(string)
+    print_out('data %d\n%s' % (len(string), (string)))
 
 def export_data(string):
     stdout.write('data %d\n' % len(string))
@@ -37,11 +48,11 @@ def inline_data(filename, code = 'M', mode = '644'):
     if platform.system() == 'Windows':
         #this is a hack'ish way to get windows path names to work git (is there a better way to do this?)
         filename = filename.replace('\\','/')
-    print_out("%s %s inline %s" % (code, mode, filename))
+    print_out("%s %s inline %s" % (code, mode, reencode(filename)))
     export_data(content)
 
 def si(command):
-    #print("%s %s" % (datetime.now().strftime("%H:%M:%S"), command), file=sys.stderr)
+    trace(command)
     for i in range(20):
         # subprocess.getstatusoutput() below
         try:
@@ -72,7 +83,9 @@ def retrieve_revisions(devpath=False):
     versions = si('si viewprojecthistory %s --quiet --rfilter=devpath:%s --project="%s"' % (additional_si_args, devpath, project))
     versions = versions.split('\n')
     versions = versions[1:]
-    version_re = re.compile('[0-9]([\.0-9])+')
+    version_re = re.compile('^\d+(\.\d+)+\t')
+
+    setup_dateformat()
 
     revisions = []
     for version in versions:
@@ -82,7 +95,7 @@ def retrieve_revisions(devpath=False):
             revision = {}
             revision["number"] = version_cols[0]
             revision["author"] = version_cols[1]
-            revision["seconds"] = int(time.mktime(datetime.strptime(version_cols[2], "%d.%m.%Y %X").timetuple()))
+            revision["seconds"] = int(time.mktime(datetime.strptime(version_cols[2], "%x %X").timetuple()))
             revision["tags"] = [ v for v in version_cols[5].split(",") if v ]
             revision["description"] = version_cols[6]
             revisions.append(revision)
@@ -111,13 +124,14 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
     abs_sandbox_path = os.getcwd()
     abs_sandbox_path = abs_sandbox_path.replace("\\", "/")
     integrity_file = os.path.basename(project)
+    git_folder_re = re.compile("\.git(\\\|$)")  #any path named .git, with or without child elements. But will not match .gitignore
     
     if "ancestorDate" in revisions[0]:
         ancestor = revisions[0]["ancestor"]
         ancestorDate = revisions[0]["ancestorDate"]
 
     for revision in revisions:
-        print("%d of %d (%f%%)" % (done_count, total_revision_count, done_count/total_revision_count*100), file=sys.stderr)
+        print("%d of %d (%0.2f%%)" % (done_count+1, total_revision_count, done_count/total_revision_count*100), file=sys.stderr)
         done_count += 1
         
         mark = marks[revision["number"]]
@@ -143,7 +157,8 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
                     fullfile = os.path.join(dir[0], filename)[2:]
                 if (fullfile.find('.pj') != -1):
                     continue
-                if (fullfile[0:4] == ".git"):
+                #if (fullfile[0:4] == ".git"):
+                if git_folder_re.search(fullfile):
                     continue
                 if (fullfile.find('mks_checkpoints_to_git') != -1):
                     continue
@@ -154,12 +169,13 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
             print_out('from %s' % mark)
             print_out('tagger %s <> %d +0000' % (revision["author"], revision["seconds"]))
             export_string("") # Tag message
-        #print_out('checkpoint')
 
+        re.purge()
     print_out('checkpoint')
     return done_count
 
-repo = Repo(".")
+repo = Repo(os.getcwd())
+trace("Git directory: %s" % repo.common_dir)
 def find_continuation_point(done_count, revisions):
     if not repo.head.is_valid(): return done_count, revisions
     last_commit_date = repo.head.commit.committed_date
@@ -202,7 +218,7 @@ def create_marks(master_revisions, devpaths3):
         if "ancestorDate" in master_revisions[0]: # we are continuing master
             convert_revision_to_mark(master_revisions[0]["ancestor"], False, master_revisions[0]["ancestorDate"])
         for revision in master_revisions:
-            convert_revision_to_mark(revision["number"], True, ancestorDate)
+            convert_revision_to_mark(revision["number"], True)
     for devpath3 in devpaths3:
         convert_revision_to_mark(devpath3["info"][1], False, devpath3["ancestorDate"])
         for revision in devpath3["revisions"]:
@@ -219,6 +235,9 @@ def check_tags_for_uniqueness(all_revisions):
             print(str(len(revisions)) + " revisions found for tag " + tag + ": " + ", ".join([ r["number"] for r in revisions ]), file=sys.stderr)
             error = True
     assert not error, "duplicate revisions"
+
+def setup_dateformat():
+    locale.setlocale(locale.LC_ALL, '')
 
 all_revisions = retrieve_revisions()
 revisions = all_revisions[:]
@@ -245,7 +264,7 @@ for devpath2 in devpaths2:
     assert len(ancestorDate) == 1, "Not exactly one ancestor with revision " + ancestor + " found, but " + str(len(ancestorDate))
     devpath3["ancestorDate"] = ancestorDate[0]["seconds"]
     devpaths3.append(devpath3)
-
+trace("Found %d revisions and %d devapaths" % (len(revisions), sum([ len(dp["revisions"]) for dp in devpaths3 ]) ))
 if len(revisions) == 0 and sum([ len(dp["revisions"]) for dp in devpaths3 ]) == 0:
     exit(0)
 

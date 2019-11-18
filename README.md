@@ -5,10 +5,10 @@
 
 ## HOW TO USE
 1. You must have
-   - python on the PATH variable
-   - si on the PATH variable (MKS/PTC command line tools)
-   - git on the PATH variable
-   - git-python (`pip install git-python`)
+   - `python` on the PATH variable
+   - `si` on the PATH variable (MKS/PTC command line tools)
+   - `git` on the PATH variable
+   - GitPython module (`pip install GitPython`)
 2. Make a folder for where you want your git repository to reside
 3. Initialize the git repository by running `git init`
 4. Execute  ```python mks_checkpoints_to_git.py <MKS_project_path/project.pj> | git fast-import``` from within the initialized git repository (this may take a while depending on how big your project is)
@@ -23,8 +23,9 @@ MKS supports [shared subprojects](http://support.ptc.com/help/integrity_hc/integ
 
 ### Date parsing
 
-The date depends on the locale. Depending on the locale settings of your machine the [datetime format string](https://www.programiz.com/python-programming/datetime/strftime#format-code) has to be adjusted in line 85.
+The date depends on the locale. Depending on the locale settings of your machine the [datetime format string](https://www.programiz.com/python-programming/datetime/strftime#format-code) has to be adjusted.
 
 ### Tags that differ only in case
 
 MKS and git both have case-sensitive tags (i.e., the tag "abcd" and "Abcd" are not the same). If `git fast-import` is running on a case-insensitive filesystem (like NTFS), such tags are considered duplicate ([see mailing list](https://marc.info/?l=git&m=155157276401181&w=2) and git fails with an error like "cannot lock ref". In this case you either have to ignore one of the tags (e.g. because it is a duplicate anyway, probably in line 86) or use a case-sensitive filesystem (NTFS can do that, too: `fsutil.exe file SetCaseSensitiveInfo C:\sensitive enable`).
+
