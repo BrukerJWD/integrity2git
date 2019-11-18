@@ -13,7 +13,7 @@ assert os.path.isdir(".git"), "Call git init first"
 stdout = open(sys.__stdout__.fileno(),  # no wrapper around stdout which does LF translation
               mode=sys.__stdout__.mode,
               buffering=1,
-              encoding=sys.__stdout__.encoding,
+              encoding='utf8',  # Required for git fast-import
               errors=sys.__stdout__.errors,
               newline='\n',
               closefd=False)
@@ -21,12 +21,20 @@ stdout = open(sys.__stdout__.fileno(),  # no wrapper around stdout which does LF
 additional_si_args = ""
 project = sys.argv[1]
 
+locale.setlocale(locale.LC_ALL, '')
+# Check for a date format passed as a parameter
+if sys.argv[2] == '--date-format':
+    date_format = sys.argv[3]
+else:
+    date_format = '%x %X'
+
+
 if not project.endswith("/project.pj"):
     project += "/project.pj"
 
 def reencode(string):
     return string.encode("utf-8").decode(sys.__stdout__.encoding)
-    
+
 def print_out(data):
     print(data, file=stdout)
 
@@ -72,7 +80,7 @@ def si(command):
         print_out('checkpoint')
         raise Exception("Command failed")
     return data.decode("cp850")
-    
+
 
 def retrieve_revisions(devpath=False):
     if devpath:
@@ -85,8 +93,6 @@ def retrieve_revisions(devpath=False):
     versions = versions[1:]
     version_re = re.compile('^\d+(\.\d+)+\t')
 
-    setup_dateformat()
-
     revisions = []
     for version in versions:
         match = version_re.match(version)
@@ -95,7 +101,7 @@ def retrieve_revisions(devpath=False):
             revision = {}
             revision["number"] = version_cols[0]
             revision["author"] = version_cols[1]
-            revision["seconds"] = int(time.mktime(datetime.strptime(version_cols[2], "%x %X").timetuple()))
+            revision["seconds"] = int(time.mktime(datetime.strptime(version_cols[2], date_format).timetuple()))
             revision["tags"] = [ v for v in version_cols[5].split(",") if v ]
             revision["description"] = version_cols[6]
             revisions.append(revision)
@@ -125,7 +131,7 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
     abs_sandbox_path = abs_sandbox_path.replace("\\", "/")
     integrity_file = os.path.basename(project)
     git_folder_re = re.compile("\.git(\\\|$)")  #any path named .git, with or without child elements. But will not match .gitignore
-    
+
     if "ancestorDate" in revisions[0]:
         ancestor = revisions[0]["ancestor"]
         ancestorDate = revisions[0]["ancestorDate"]
@@ -133,7 +139,7 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
     for revision in revisions:
         print("%d of %d (%0.2f%%)" % (done_count+1, total_revision_count, done_count/total_revision_count*100), file=sys.stderr)
         done_count += 1
-        
+
         mark = marks[revision["number"]]
         si('si retargetsandbox %s --quiet --project="%s" --projectRevision=%s %s/%s' % (additional_si_args, project, revision["number"], abs_sandbox_path, integrity_file))
         si('si resync --yes --recurse %s --quiet --sandbox=%s/%s' % (additional_si_args, abs_sandbox_path, integrity_file))
@@ -163,7 +169,7 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
                 if (fullfile.find('mks_checkpoints_to_git') != -1):
                     continue
                 inline_data(fullfile)
-        
+
         for tag in revision["tags"]:
             print_out('tag %s' % tag.replace(" ", "_"))
             print_out('from %s' % mark)
@@ -208,12 +214,12 @@ def create_marks(master_revisions, devpaths3):
             return mark
         else:
             assert date, "No date given, cannot find commit"
-            date = datetime.strftime(datetime.fromtimestamp(date), "%d.%m.%Y %X")
+            date = datetime.strftime(datetime.fromtimestamp(date), date_format)
             commits = [c for c in repo.iter_commits("--all", before=date, after=date)]
             assert len(commits) == 1, "No commit found for date " + date
             marks[revision] = commits[0].hexsha
             return commits[0].hexsha
-    
+
     if len(master_revisions) > 0:
         if "ancestorDate" in master_revisions[0]: # we are continuing master
             convert_revision_to_mark(master_revisions[0]["ancestor"], False, master_revisions[0]["ancestorDate"])
@@ -235,9 +241,6 @@ def check_tags_for_uniqueness(all_revisions):
             print(str(len(revisions)) + " revisions found for tag " + tag + ": " + ", ".join([ r["number"] for r in revisions ]), file=sys.stderr)
             error = True
     assert not error, "duplicate revisions"
-
-def setup_dateformat():
-    locale.setlocale(locale.LC_ALL, '')
 
 all_revisions = retrieve_revisions()
 revisions = all_revisions[:]
