@@ -21,15 +21,18 @@ stdout = open(sys.__stdout__.fileno(),  # no wrapper around stdout which does LF
 additional_si_args = ""
 project = sys.argv[1]
 
-locale.setlocale(locale.LC_ALL, '')
+#print(locale.getlocale())
+#locale.setlocale(locale.LC_ALL, '')
+#print(locale.getlocale())
+
 # Check for a date format passed as a parameter
-if sys.argv[2] == '--date-format':
+if len(sys.argv) > 2 and sys.argv[2] == '--date-format':
     date_format = sys.argv[3]
 else:
     date_format = '%x %X'
 
 
-if not project.endswith("/project.pj"):
+if not project.endswith(".pj"):
     project += "/project.pj"
 
 def reencode(string):
