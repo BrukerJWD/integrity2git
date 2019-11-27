@@ -10,7 +10,7 @@ from git import Repo
 parser = argparse.ArgumentParser(description="Convert MKS to Git")
 parser.add_argument("pathToProject",    help="MKS' path to project.pj that shall be converted")
 parser.add_argument("--date-format",    help="alternative date format for parsing MKS' output", default="%x %X")
-parser.add_argument("--input-encoding", help="encoding that MKS uses to output it's information", default="windows-1252")
+parser.add_argument("--input-encoding", help="encoding that MKS uses to output it's information", default="cp850")
 args = parser.parse_args()
 
 assert os.path.isdir(".git"), "Call git init first"
