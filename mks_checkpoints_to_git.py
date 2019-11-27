@@ -3,55 +3,45 @@
 import os, sys, re, time, platform, shutil
 import subprocess
 import locale
+import argparse
 from datetime import datetime
 from git import Repo
 
+parser = argparse.ArgumentParser(description="Convert MKS to Git")
+parser.add_argument("pathToProject",    help="MKS' path to project.pj that shall be converted")
+parser.add_argument("--date-format",    help="alternative date format for parsing MKS' output", default="%x %X")
+parser.add_argument("--input-encoding", help="encoding that MKS uses to output it's information", default="windows-1252")
+args = parser.parse_args()
 
 assert os.path.isdir(".git"), "Call git init first"
 
-#stdout = sys.stdout
-stdout = open(sys.__stdout__.fileno(),  # no wrapper around stdout which does LF translation
-              mode=sys.__stdout__.mode,
-              buffering=1,
-              encoding='utf8',  # Required for git fast-import
-              errors=sys.__stdout__.errors,
-              newline='\n',
-              closefd=False)
+git_fastimport = subprocess.Popen(["git", "fast-import"], stdin=subprocess.PIPE)
 
 additional_si_args = ""
-project = sys.argv[1]
+ignore_devpaths = []
+ignore_tags = []
 
-#print(locale.getlocale())
-#locale.setlocale(locale.LC_ALL, '')
-#print(locale.getlocale())
+project = args.pathToProject
+if not project.endswith(".pj"): project += "/project.pj"
 
-# Check for a date format passed as a parameter
-if len(sys.argv) > 2 and sys.argv[2] == '--date-format':
-    date_format = sys.argv[3]
-else:
-    date_format = '%x %X'
-
-
-if not project.endswith(".pj"):
-    project += "/project.pj"
-
-def reencode(string):
-    return string.encode("utf-8").decode(sys.__stdout__.encoding)
 
 def print_out(data):
-    print(data, file=stdout)
+    git_fastimport.stdin.write(data.encode("utf-8"))
+    git_fastimport.stdin.write('\n'.encode("utf-8"))
 
 def trace(message):
-    print("%s %s" % (datetime.now().strftime("%H:%M:%S"), message), file=sys.stderr)
+    print("%s %s" % (datetime.now().strftime("%H:%M:%S"), message))
 
 def export_string(string):
-    string = reencode(string)
-    print_out('data %d\n%s' % (len(string), (string)))
+    string = string.encode("utf-8")
+    git_fastimport.stdin.write(('data %d\n' % len(string)).encode("utf-8"))
+    git_fastimport.stdin.write(string)
+    git_fastimport.stdin.write('\n'.encode("utf-8"))
 
 def export_data(string):
-    stdout.write('data %d\n' % len(string))
-    stdout.buffer.write(string)
-    stdout.write('\n')
+    git_fastimport.stdin.write(('data %d\n' % len(string)).encode("utf-8"))
+    git_fastimport.stdin.write(string)
+    git_fastimport.stdin.write('\n'.encode("utf-8"))
 
 def inline_data(filename, code = 'M', mode = '644'):
 
@@ -59,7 +49,7 @@ def inline_data(filename, code = 'M', mode = '644'):
     if platform.system() == 'Windows':
         #this is a hack'ish way to get windows path names to work git (is there a better way to do this?)
         filename = filename.replace('\\','/')
-    print_out("%s %s inline %s" % (code, mode, reencode(filename)))
+    print_out("%s %s inline %s" % (code, mode, filename))
     export_data(content)
 
 def si(command):
@@ -67,7 +57,7 @@ def si(command):
     for i in range(20):
         # subprocess.getstatusoutput() below
         try:
-            data = subprocess.check_output(command, shell=True, stderr=subprocess.STDOUT)
+            data = subprocess.check_output(command, stderr=subprocess.STDOUT)
             exitcode = 0
         except subprocess.CalledProcessError as ex:
             data = ex.output
@@ -82,7 +72,7 @@ def si(command):
     else:
         print_out('checkpoint')
         raise Exception("Command failed")
-    return data.decode("cp850")
+    return data.decode(args.input_encoding)
 
 
 def retrieve_revisions(devpath=False):
@@ -104,8 +94,8 @@ def retrieve_revisions(devpath=False):
             revision = {}
             revision["number"] = version_cols[0]
             revision["author"] = version_cols[1]
-            revision["seconds"] = int(time.mktime(datetime.strptime(version_cols[2], date_format).timetuple()))
-            revision["tags"] = [ v for v in version_cols[5].split(",") if v ]
+            revision["seconds"] = int(time.mktime(datetime.strptime(version_cols[2], args.date_format).timetuple()))
+            revision["tags"] = [ v for v in version_cols[5].split(",") if v and v not in ignore_tags ]
             revision["description"] = version_cols[6]
             revisions.append(revision)
         else: # append to previous description
@@ -140,7 +130,7 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
         ancestorDate = revisions[0]["ancestorDate"]
 
     for revision in revisions:
-        print("%d of %d (%0.2f%%)" % (done_count+1, total_revision_count, done_count/total_revision_count*100), file=sys.stderr)
+        print("%d of %d (%0.2f%%)" % (done_count+1, total_revision_count, done_count/total_revision_count*100))
         done_count += 1
 
         mark = marks[revision["number"]]
@@ -217,7 +207,7 @@ def create_marks(master_revisions, devpaths3):
             return mark
         else:
             assert date, "No date given, cannot find commit"
-            date = datetime.strftime(datetime.fromtimestamp(date), date_format)
+            date = datetime.strftime(datetime.fromtimestamp(date), args.date_format)
             commits = [c for c in repo.iter_commits("--all", before=date, after=date)]
             assert len(commits) == 1, "No commit found for date " + date
             marks[revision] = commits[0].hexsha
@@ -251,6 +241,7 @@ revisions = all_revisions[:]
 devpaths = retrieve_devpaths()
 devpaths2 = []
 for devpath in devpaths:
+    if devpath[0] in ignore_devpaths: continue
     devpath2 = (devpath, retrieve_revisions(devpath[0]))
     all_revisions.extend(devpath2[1])
     devpaths2.append(devpath2)
