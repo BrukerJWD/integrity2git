@@ -52,7 +52,7 @@ If a development path's name contains special characters, the script exists with
 
 > UnboundLocalError: local variable 'revision' referenced before assignment
 
-This is caused by `si` not being able to correctly parse the command line argument with the specified devpath. If you are running python3, everything should be fine, but obviously it isn't.
+This is caused by `si` not being able to correctly parse the command line argument with the specified devpath. With [this question](https://community.ptc.com/t5/Integrity-Windchill-Systems/Are-CLI-commands-taking-into-account-the-code-page-that-is-set/td-p/142055) in mind, I assume that `si` is always parsing the command line arguments using the codepage of its projects, but python3 uses UTF-8.
 
 Perhaps we could use the `--selectionFile` argument to work around this issue.
 
