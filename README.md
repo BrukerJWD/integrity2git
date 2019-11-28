@@ -59,3 +59,7 @@ Perhaps we could use the `--selectionFile` argument to work around this issue.
 ### "Unsupported command: 10:32:05"
 
 Do not pipe this script's output to `git fast-import` anymore. Instead, the script will launch `git fast-import` itself to talk to it directly. The conversion can still have succeded, though.
+
+### Corrupt checkpoints
+
+Some checkpoints in MKS may be corrupt (e.g., a member revision is missing). To still be able to convert the project, one can skip checkpoints by adding it to `ignore_revisions`^

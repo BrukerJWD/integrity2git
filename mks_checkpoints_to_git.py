@@ -19,6 +19,7 @@ git_fastimport = subprocess.Popen(["git", "fast-import"], stdin=subprocess.PIPE)
 
 additional_si_args = ""
 ignore_devpaths = []
+ignore_revisions = []
 ignore_tags = []
 
 project = args.pathToProject
@@ -97,7 +98,8 @@ def retrieve_revisions(devpath=False):
             revision["seconds"] = int(time.mktime(datetime.strptime(version_cols[2], args.date_format).timetuple()))
             revision["tags"] = [ v for v in version_cols[5].split(",") if v and v not in ignore_tags ]
             revision["description"] = version_cols[6]
-            revisions.append(revision)
+            if not revision["number"] in ignore_revisions:
+                revisions.append(revision)
         else: # append to previous description
             if not version: continue
             if revision["description"]: revision["description"] += '\n'
@@ -261,7 +263,7 @@ for devpath2 in devpaths2:
     assert len(ancestorDate) == 1, "Not exactly one ancestor with revision " + ancestor + " found, but " + str(len(ancestorDate))
     devpath3["ancestorDate"] = ancestorDate[0]["seconds"]
     devpaths3.append(devpath3)
-trace("Found %d revisions and %d devapaths" % (len(revisions), sum([ len(dp["revisions"]) for dp in devpaths3 ]) ))
+trace("Found %d revisions and %d devpaths" % (len(revisions), sum([ len(dp["revisions"]) for dp in devpaths3 ]) ))
 if len(revisions) == 0 and sum([ len(dp["revisions"]) for dp in devpaths3 ]) == 0:
     exit(0)
 
