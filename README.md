@@ -62,4 +62,4 @@ Do not pipe this script's output to `git fast-import` anymore. Instead, the scri
 
 ### Corrupt checkpoints
 
-Some checkpoints in MKS may be corrupt (e.g., a member revision is missing). To still be able to convert the project, one can skip checkpoints by adding it to `ignore_revisions`^
+Some checkpoints in MKS may be corrupt (e.g., a member revision is missing). To still be able to convert the project, one can skip checkpoints by adding it to `ignore_revisions`
