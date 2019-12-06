@@ -8,9 +8,10 @@ from datetime import datetime
 from git import Repo
 
 parser = argparse.ArgumentParser(description="Convert MKS to Git")
-parser.add_argument("pathToProject",    help="MKS' path to project.pj that shall be converted")
-parser.add_argument("--date-format",    help="alternative date format for parsing MKS' output", default="%x %X")
-parser.add_argument("--input-encoding", help="encoding that MKS uses to output it's information", default="cp850")
+parser.add_argument("pathToProject",                help="MKS' path to project.pj that shall be converted")
+parser.add_argument("--date-format",                help="alternative date format for parsing MKS' output", default="%x %X")
+parser.add_argument("--input-encoding",             help="encoding that MKS uses to output it's information", default="cp850")
+parser.add_argument("--drop-and-create-sandboxes",  help="don't use retarget, but drop the sandbox and create it again", action='store_true')
 args = parser.parse_args()
 
 assert os.path.isdir(".git"), "Call git init first"
@@ -136,8 +137,15 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
         done_count += 1
 
         mark = marks[revision["number"]]
-        si('si retargetsandbox %s --quiet --project="%s" --projectRevision=%s %s/%s' % (additional_si_args, project, revision["number"], abs_sandbox_path, integrity_file))
-        si('si resync --yes --recurse %s --quiet --sandbox=%s/%s' % (additional_si_args, abs_sandbox_path, integrity_file))
+
+        if args.drop_and_create_sandboxes:
+            shortname=project.replace('"', '').split('/')[-1]
+            si("si dropsandbox --yes -f --delete=all %s" % (shortname))
+            si('si createsandbox %s --populate --recurse --quiet --project="%s" --projectRevision=%s .' % (additional_si_args, project, revision["number"]))
+        else:
+            si('si retargetsandbox %s --quiet --project="%s" --projectRevision=%s %s/%s' % (additional_si_args, project, revision["number"], abs_sandbox_path, integrity_file))
+            si('si resync --yes --recurse %s --quiet --sandbox=%s/%s' % (additional_si_args, abs_sandbox_path, integrity_file))
+
         if devpath:
             print_out('commit refs/heads/devpath/%s' % devpath)
         else:

@@ -31,6 +31,9 @@ It is not really clear to me what encoding `si` is using. There are some setting
  - Set encoding of Windows command line to Windows-1252: `CHCP 1252`
  - add argument: `--input-encoding windows-1252`
 
+### Retarget&Resync vs. Drop&Create
+
+Some projects are messed up in a way, that retargeting the sandbox is not possible, e.g. it fails for many revisions with a corrupt subproject (or so). For this case, one can pass the argument `--drop-and-create-sandboxes` as a more robust, but also more slow way to iterate through the checkpoints in MKS.
 
 ## Known bugs/problems
 
