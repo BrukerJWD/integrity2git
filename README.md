@@ -70,3 +70,9 @@ Some checkpoints in MKS may be corrupt (e.g., a member revision is missing). To 
 ### Invalid branch or tag names
 
 Git branches and tags do have (other) restrictions on [which characters one can use](https://wincent.com/wiki/Legal_Git_branch_names). To map a branch/tag to another name, add an entry to the map `rename_devpaths` or `rename_tags` respectively. If you want to apply some more general conversion (e.g. replacing all '>' by '-') you can add a rule in the functions `convert_branch_name` or `convert_tag_name` respectively.
+
+Other restrictions are added by the operating system because a lock file is created for each tag. Thus, a tag cannot contain characters that are not allowed in filenames (e.g. '<' on Windows). These restrictions are not checked beforehand and don't lead to an abortion of the conversion. You can only see the errors being printed to the console by `git`.
+
+### Deleted development paths
+
+If development paths have been deleted, their revisions are not converted. If from such a deleted devpath another devpath was created, the conversion script may fail as it does not know about the base revision of the existing devpath.
