@@ -4,6 +4,7 @@ import os, sys, re, time, platform, shutil
 import subprocess
 import locale
 import argparse
+import tempfile
 from datetime import datetime
 from git import Repo
 
@@ -139,7 +140,7 @@ def export_to_git(revisions, done_count, devpath=False, ancestor=False, ancestor
         mark = marks[revision["number"]]
 
         if args.drop_and_create_sandboxes:
-            shortname=project.replace('"', '').split('/')[-1]
+            shortname = project.replace('"', '').replace('\\','/').split('/')[-1]
             si("si dropsandbox --yes -f --delete=all %s" % (shortname))
             si('si createsandbox %s --populate --recurse --quiet --project="%s" --projectRevision=%s .' % (additional_si_args, project, revision["number"]))
         else:
@@ -234,14 +235,28 @@ def create_marks(master_revisions, devpaths3):
             convert_revision_to_mark(revision["number"], True)
 
 def check_tags_for_uniqueness(all_revisions):
+    def is_filesystem_case_sensitive():
+        tmphandle, tmppath = tempfile.mkstemp()
+        case_sensitive = not os.path.exists(tmppath.upper())
+        os.close(tmphandle)
+        os.remove(tmppath)
+        return case_sensitive
+    case_sensitive = is_filesystem_case_sensitive()
+
     tags = {}
     for revision in all_revisions:
         for tag in revision["tags"]:
-            tags.setdefault(tag, []).append(revision)
+            if not case_sensitive: tagL = tag.lower()
+            else: tagL = tag
+            tags.setdefault(tagL, []).append((revision, tag))
     error = False
     for tag, revisions in tags.items():
         if len(revisions) > 1:
-            print(str(len(revisions)) + " revisions found for tag " + tag + ": " + ", ".join([ r["number"] for r in revisions ]), file=sys.stderr)
+            if not case_sensitive:
+                print(f"{len(revisions)} revisions found for tag {tag}: " + ", ".join([ f"{r[0]['number']} ({r[1]})" for r in revisions ]), file=sys.stderr)
+                print("This error is raised to avoid problems with a case-insensitive file system (see README)")
+            else:
+                print(f"{len(revisions)} revisions found for tag {tag}: " + ", ".join([ r[0]["number"] for r in revisions ]), file=sys.stderr)
             error = True
     assert not error, "duplicate revisions"
 
@@ -300,5 +315,5 @@ for devpath3 in devpaths3:
 os.chdir("..")
 
 # Drop the sandbox
-shortname=project.replace('"', '').split('/')[-1]
+shortname = project.replace('"', '').replace('\\','/').split('/')[-1]
 si("si dropsandbox --yes -f --delete=all tmp/%s" % (shortname))
