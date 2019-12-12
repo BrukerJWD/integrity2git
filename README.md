@@ -28,7 +28,7 @@ The date depends on the locale. Depending on the locale settings of your machine
 
 It is not really clear to me what encoding `si` is using. There are some settings in the MKS preferences, but I do not know which one is affecting si. If you get error regarding the encoding or some characters are replaced by question marks, this helped for me:
 
- - Set encoding of Windows command line to Windows-1252: `CHCP 1252`
+ - set encoding of Windows command line to Windows-1252: `CHCP 1252`
  - add argument: `--input-encoding windows-1252`
 
 ### Retarget&Resync vs. Drop&Create
@@ -47,11 +47,11 @@ MKS and git both have case-sensitive tags (i.e., the tag "abcd" and "Abcd" are n
 
 ### DevPath that equals :current
 
-Some of our projects seem to have a development path that equals the Normal path. It leads to errors such as "duplicate tag detected" for many, many revisions. I do not know how these development paths were created or how to distinguish them from regular development paths. My only recommendation is to ignore this devpath completely by adding it to `ignore_devpaths`)
+Some of our projects seem to have a development path that equals the Normal path. It leads to errors such as "duplicate tag detected" for many, many revisions. I do not know how these development paths were created or how to distinguish them from regular development paths. My only recommendation is to ignore this devpath completely by adding it to `ignore_devpaths`
 
 ### Encoding for devpath names
 
-If a development path's name contains special characters, the script exists with the following error:
+If a development path's name contains special characters, the script may exit with the following error:
 
 > UnboundLocalError: local variable 'revision' referenced before assignment
 
@@ -66,3 +66,7 @@ Do not pipe this script's output to `git fast-import` anymore. Instead, the scri
 ### Corrupt checkpoints
 
 Some checkpoints in MKS may be corrupt (e.g., a member revision is missing). To still be able to convert the project, one can skip checkpoints by adding it to `ignore_revisions`
+
+### Invalid branch or tag names
+
+Git branches and tags do have (other) restrictions on [which characters one can use](https://wincent.com/wiki/Legal_Git_branch_names). To map a branch/tag to another name, add an entry to the map `rename_devpaths` or `rename_tags` respectively. If you want to apply some more general conversion (e.g. replacing all '>' by '-') you can add a rule in the functions `convert_branch_name` or `convert_tag_name` respectively.
