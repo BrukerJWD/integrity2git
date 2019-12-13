@@ -199,7 +199,7 @@ class MKS:
         return [ MKS.DevPath(dp[0], dp[1]) for dp in devpath_col if not dp[0] in ignore_devpaths ]
 
     def create_sandbox(self, revision: Revision):
-        self.__si('si createsandbox %s --populate --recurse --quiet --project="%s" --projectRevision=%s tmp' % (additional_si_args, self.project, revision.number))
+        self.__si('si createsandbox %s --populate --recurse --quiet --project="%s" --projectRevision=%s %s' % (additional_si_args, self.project, revision.number, self.sandboxPath))
 
     def drop_sandbox(self):
         self.__si("si dropsandbox --yes -f --delete=all %s/%s" % (self.sandboxPath, self.projectName))
