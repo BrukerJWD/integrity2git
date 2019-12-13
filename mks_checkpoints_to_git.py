@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 # ADDITIONAL CONFIGURATION
-additional_si_args = "--user=jonathan.wendeborn"
+additional_si_args = ""
 ignore_devpaths = []
 rename_devpaths = {}
 ignore_revisions = []
