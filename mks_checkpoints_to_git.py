@@ -199,16 +199,16 @@ class MKS:
         return [ MKS.DevPath(dp[0], dp[1]) for dp in devpath_col if not dp[0] in ignore_devpaths ]
 
     def create_sandbox(self, revision: Revision):
-        self.__si('si createsandbox %s --populate --recurse --quiet --project="%s" --projectRevision=%s %s' % (additional_si_args, self.project, revision.number, self.sandboxPath))
+        self.__si('si createsandbox %s --populate --recurse --quiet --project="%s" --projectRevision=%s "%s"' % (additional_si_args, self.project, revision.number, self.sandboxPath))
 
     def drop_sandbox(self):
-        self.__si("si dropsandbox --yes -f --delete=all %s/%s" % (self.sandboxPath, self.projectName))
+        self.__si('si dropsandbox --yes -f --delete=all "%s/%s"' % (self.sandboxPath, self.projectName))
 
     def retarget(self, revision: Revision):
-        self.__si('si retargetsandbox %s --quiet --project="%s" --projectRevision=%s %s/%s' % (additional_si_args, self.project, revision.number, self.sandboxPath, self.projectName))
+        self.__si('si retargetsandbox %s --quiet --project="%s" --projectRevision=%s "%s/%s"' % (additional_si_args, self.project, revision.number, self.sandboxPath, self.projectName))
 
     def resync(self):
-        self.__si('si resync --yes --recurse %s --quiet --sandbox=%s/%s' % (additional_si_args, self.sandboxPath, self.projectName))
+        self.__si('si resync --yes --recurse %s --quiet --sandbox="%s/%s"' % (additional_si_args, self.sandboxPath, self.projectName))
 
     def retarget_to(self, revision: Revision):
         if args.drop_and_create_sandboxes:
