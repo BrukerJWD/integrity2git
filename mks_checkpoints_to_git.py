@@ -248,7 +248,7 @@ class Convert:
             self.mks.retarget_to(revision)
 
             if devpath: self.git.command('commit refs/heads/devpath/%s' % devpath.git_name)
-            else:       self.git.command('commit refs/heads/master')
+            else:       self.git.command('commit refs/heads/main')
             self.git.command('mark %s' % mark)
             self.git.command('committer %s <> %d +0000' % (revision.author, revision.seconds))
             self.git.export_string(revision.description)
